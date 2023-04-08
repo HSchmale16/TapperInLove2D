@@ -37,6 +37,7 @@ COLOR_BEER = {
     139 / 255,
     69 / 255,
     19 / 255
+    -- saddlebrown
 }
 
 -- ------------------------------------------------------
@@ -49,7 +50,9 @@ Lane.__index = Lane
 function Lane:new (o)
     local l = {
         y = 0,
-        barkeep_here = false
+        barkeep_here = false,
+        mugs = {},
+        patrons = {}
     }
     -- print(inspect(o))
 
@@ -71,7 +74,7 @@ function Lane:draw()
 
     -- draw the taps
     love.graphics.rectangle("fill", 990, self.y - 50, 100, 100)
-    love.graphics.rectangle("fill", 975, self.y - 10, 20, 10)
+    love.graphics.rectangle("fill", 975, self.y - 14, 20, 7)
 
     -- draw the bartender if here
     if self.barkeep_here then
@@ -171,7 +174,7 @@ function love.keyreleased(key, scancode, isrepeat)
     if key == 's' then
         -- mugfill is over
         MUGFILL_IN_PROGRESS = false
-        
+
         if MUGFILL_PERCENT >= 100 then
             finishMugFill()
         end
