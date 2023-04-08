@@ -20,10 +20,12 @@ function Lane:new (o)
 end
 
 function Lane:draw()
-
     -- draw the bar table
     love.graphics.setColor(COLOR_TABLE)
-    love.graphics.rectangle("fill", 0, self.y, 700, 50)
+    love.graphics.rectangle("fill", 0, self.y, 900, 100)
+
+    -- draw the taps
+    love.graphics.rectangle("fill", 950, self.y - 50, 50, 100)
 end
 
 function Lane:spawnPatrons() 
@@ -31,10 +33,10 @@ end
 
 
 lanes = {
-    Lane:new{y=75},
-    Lane:new{y=175},
-    Lane:new{y=275},
-    Lane:new{y=375}
+    Lane:new{y=200},
+    Lane:new{y=350},
+    Lane:new{y=500},
+    Lane:new{y=650}
 }
 
 print(lanes)
