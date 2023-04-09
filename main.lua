@@ -25,13 +25,13 @@ COLOR_BEER = {139 / 255, 69 / 255, 19 / 255}
 COLOR_PATRON = {0, 1, 0}
 COLOR_LEAVING_PATRON = {1, 1, 0}
 
-MUG_HEIGHT = 25
-MUG_WIDTH = 12
+MUG_HEIGHT = 30
+MUG_WIDTH = 20
 
 PATRON_WIDTH = 24
 
 SCORE = 0
-
+LIVES = 3
 
 -- ------------------------------------------------------
 -- Begin the lane definitions
@@ -76,9 +76,33 @@ function Lane:draw()
     love.graphics.setColor(COLOR_TABLE)
     love.graphics.rectangle("fill", 0, self.y, self.TABLE_END, 80)
 
+    if self.barkeep_here then
+        love.graphics.setColor(COLOR_BARKEEP)
+        love.graphics.rectangle("fill", 910, self.y-25, 50, 75)
+
+        if MUGFILL_IN_PROGRESS or MUGFILL_PERCENT > 0 then  
+            local y = self.y + 2
+            local height = (MUGFILL_PERCENT / 100) * MUG_HEIGHT
+            local y2 = y + (MUG_HEIGHT - height)
+
+            -- mug fill
+            love.graphics.setColor(COLOR_BEER)
+            love.graphics.rectangle("fill", 965, y2, MUG_WIDTH, height)
+
+            -- the fill spout coming out
+            love.graphics.rectangle("fill", 970, self.y - 14, 5, 30)
+
+            -- mug outline
+            love.graphics.setColor(COLOR_MUG)
+            love.graphics.rectangle("line", 965, self.y + 2, MUG_WIDTH, MUG_HEIGHT)
+
+        end
+    end
+
     -- draw the taps
+    love.graphics.setColor(COLOR_TABLE)
     love.graphics.rectangle("fill", 990, self.y - 50, 100, 100)
-    love.graphics.rectangle("fill", 975, self.y - 14, 20, 7)
+    love.graphics.rectangle("fill", 965, self.y - 14, 50, 7)
 
     -- draw the bartender if here
     if self.barkeep_here then
@@ -130,12 +154,20 @@ function Lane:updatePatrons(dt)
         end
     end
 
+    local to_delete = {}
     for k, v in ipairs(self.leaving_patrons) do
         v.x = v.x + v.dx * dt
         v.y = v.y + v.dy * dt
         if v.y > 7 or v.y < 0 then
             v.dy = v.dy * -1
         end
+        if v.x < 0 then
+            table.insert(to_delete, k)
+        end
+    end
+
+    for i=1,#to_delete,1 do
+        table.remove(self.leaving_patrons, to_delete[i])
     end
 end
 
@@ -208,7 +240,8 @@ MUGFILL_IN_PROGRESS = true
 MUGFILL_PERCENT = 0
 
 -- Patron spawning counter
-PATRON_COUNTS = {1.5, 2, 1.35, 2.25}
+PATRON_COUNTS = {1.5, 2, 1.5, 2.25}
+MAX_PATRONS = 10
 PATRON_PATTERN = 1
 PATRON_SPAWNED_LAST = 1
 PATRON_COUNTER = 0
@@ -222,7 +255,7 @@ function love.draw()
         v:draw()
     end
 
-    txt = string.format("score = %d fps = %d", SCORE, love.timer.getFPS())
+    txt = string.format("score = %d lives= %d fps = %d", SCORE, LIVES, love.timer.getFPS())
     love.graphics.print(txt, 10, 10)
 end
 
@@ -237,20 +270,29 @@ function love.update(dt)
         MUGFILL_PERCENT = MUGFILL_PERCENT + 105 * dt
     end
 
+    local num_patrons = 0
+    for i=1,#lanes,1 do
+        num_patrons = num_patrons + #lanes[i].patrons
+    end
+
     -- handle spawning patrons
     PATRON_COUNTER = PATRON_COUNTER + dt
-    if PATRON_COUNTER > PATRON_COUNTS[PATRON_PATTERN] then
+    if PATRON_COUNTER > PATRON_COUNTS[PATRON_PATTERN] and num_patrons <= MAX_PATRONS then
         PATRON_COUNTER = 0
         PATRON_PATTERN = love.math.random(#PATRON_COUNTS)
         local spawn_lane = love.math.random(#lanes)
-        lanes[spawn_lane]:spawnPatron()
+        while spawn_lane == PATRON_SPAWNED_LAST do
+            spawn_lane = love.math.random(#lanes) 
+        end
+        PATRON_SPAWNED_LAST = spawn_lane
+        lanes[PATRON_SPAWNED_LAST]:spawnPatron()
     end
 end
 
+-- when a player moves down 
 function love.keypressed(key, scancode, isrepeat) 
     if key == 'a' then
         -- move barkeep down
-        MUGFILL_IN_PROGRESS = false
         MUGFILL_PERCENT = 0
         lanes[BARKEEP_INDEX].barkeep_here = false
         BARKEEP_INDEX = (BARKEEP_INDEX + 1) % (#lanes + 1)
@@ -261,7 +303,6 @@ function love.keypressed(key, scancode, isrepeat)
 
     elseif key == 'd' then
         -- move barkeep up
-        MUGFILL_IN_PROGRESS = false
         MUGFILL_PERCENT = 0
         lanes[BARKEEP_INDEX].barkeep_here = false
         BARKEEP_INDEX = (BARKEEP_INDEX - 1) % (#lanes + 1)
