@@ -40,6 +40,9 @@ COLOR_BEER = {
     -- saddlebrown
 }
 
+MUG_HEIGHT = 30
+MUG_WIDTH = 15
+
 -- ------------------------------------------------------
 -- Begin the lane definitions
 -- ------------------------------------------------------
@@ -52,9 +55,9 @@ function Lane:new (o)
         y = 0,
         barkeep_here = false,
         mugs = {},
+        TABLE_END = 900,
         patrons = {}
     }
-    -- print(inspect(o))
 
     for k, v in pairs(o) do
         l[k] = v
@@ -63,14 +66,13 @@ function Lane:new (o)
     setmetatable(l, self)
     self.__index = self
 
-    print(inspect(l))
     return l
 end
 
 function Lane:draw()
     -- draw the bar table
     love.graphics.setColor(COLOR_TABLE)
-    love.graphics.rectangle("fill", 0, self.y, 900, 80)
+    love.graphics.rectangle("fill", 0, self.y, self.TABLE_END, 80)
 
     -- draw the taps
     love.graphics.rectangle("fill", 990, self.y - 50, 100, 100)
@@ -90,26 +92,49 @@ function Lane:draw()
             love.graphics.setColor(COLOR_BEER)
             love.graphics.rectangle("fill", 965, y2, 15, height)
 
-
             -- mug outline
             love.graphics.setColor(COLOR_MUG)
-            love.graphics.rectangle("line", 965, self.y + 2, 15, 30)
+            love.graphics.rectangle("line", 965, self.y + 2, MUG_WIDTH, MUG_HEIGHT)
         end
+    end
+
+    -- draw any patrons
+
+    -- draw any mugs
+    love.graphics.setColor(COLOR_BEER)
+    for k, v in ipairs(self.mugs) do
+        love.graphics.rectangle("fill", v.x, self.y - MUG_HEIGHT, MUG_WIDTH, MUG_HEIGHT)
+    end
+
+    love.graphics.setColor(COLOR_MUG)
+    for k, v in ipairs(self.mugs) do
+        love.graphics.rectangle("line", v.x, self.y - MUG_HEIGHT, MUG_WIDTH, MUG_HEIGHT)
     end
 end
 
-function Lane:spawnPatrons()
+function Lane:spawnPatron()
+    table.insert(self.patrons, {
+        x = 0,
+        animation_frame = 0,
+        sprite = 0
+    })
 end
 
-function Lane:updateMugs() 
+function Lane:updateMugs(dt) 
+    local distance = 20 * dt
+    for k, v in pairs(self.mugs) do
+        v.x = v.x - distance
+    end
 end
 
 function Lane:update(dt)
-    self.spawnPatrons()
-    self.updateMugs()
+    self:updateMugs(dt)
 end
 
 function Lane:sendMug()
+    table.insert(self.mugs, {
+        x = self.TABLE_END - MUG_WIDTH
+    })
 end
 
 -- ------------------------------------------------------
@@ -183,7 +208,8 @@ end
 
 function finishMugFill()
     if MUGFILL_PERCENT >= 100 then
-        lanes[BARKEEP_INDEX].sendMug()
+        local item = lanes[BARKEEP_INDEX]
+        item:sendMug()
     end
     MUGFILL_PERCENT = 0
     MUGFILL_IN_PROGRESS = false
