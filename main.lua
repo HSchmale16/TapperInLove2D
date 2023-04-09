@@ -263,6 +263,7 @@ function love.draw()
     txt = string.format("score = %d lives= %d fps = %d", SCORE, LIVES, love.timer.getFPS())
     love.graphics.print(txt, 10, 10)
 
+    -- just implement a flashy boy for things a bit too far over.
     if LIFE_LOST_ANIMATION > 0 and LIFE_LOST_ANIMATION % 2 == 0 then
         love.graphics.rectangle("fill", 0, 0, 1024, 768)
     end
