@@ -246,6 +246,11 @@ PATRON_PATTERN = 1
 PATRON_SPAWNED_LAST = 1
 PATRON_COUNTER = 0
 
+-- IS_CUTSCENE
+LIFE_LOST_ANIMATION = 0
+LIFE_LOST_REASON = ""
+
+
 function love.load() 
     resetGame()
 end
@@ -257,11 +262,31 @@ function love.draw()
 
     txt = string.format("score = %d lives= %d fps = %d", SCORE, LIVES, love.timer.getFPS())
     love.graphics.print(txt, 10, 10)
+
+    if LIFE_LOST_ANIMATION > 0 and LIFE_LOST_ANIMATION % 2 == 0 then
+        love.graphics.rectangle("fill", 0, 0, 1024, 768)
+    end
 end
 
+-- random variable to track how long the screen has been blanked for
+LIFE_LOST_DECR_TIMER = 0
+
 function love.update(dt)
-    -- update the lanes
-    for k, v in ipairs(lanes) do 
+    if LIFE_LOST_ANIMATION > 0 then
+        LIFE_LOST_DECR_TIMER = LIFE_LOST_DECR_TIMER + dt
+        if LIFE_LOST_DECR_TIMER > 0.5 then
+            LIFE_LOST_ANIMATION = LIFE_LOST_ANIMATION - 1
+            LIFE_LOST_DECR_TIMER = LIFE_LOST_DECR_TIMER - 0.5
+        end
+        print(LIFE_LOST_DECR_TIMER, LIFE_LOST_ANIMATION)
+    else
+        game_loop(dt)
+    end
+end
+
+function game_loop(dt) 
+     -- update the lanes
+     for k, v in ipairs(lanes) do 
         v:update(dt)
     end
 
@@ -338,6 +363,10 @@ end
 
 function resetGame() 
     SCORE = 0
+    resetLanes()
+end
+
+function resetLanes() 
     lanes = {
         Lane:new{y=200, barkeep_here=true},
         Lane:new{y=350},
