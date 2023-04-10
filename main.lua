@@ -133,16 +133,42 @@ function Lane:draw()
     end
 
     love.graphics.setColor(COLOR_MUG)
-    for k, v in ipairs(self.mugs) do
-        love.graphics.rectangle("line", v.x, self.y - MUG_HEIGHT, MUG_WIDTH, MUG_HEIGHT)
+    for i = 1,#self.mugs do
+        local mug = self.mugs[i]
+        love.graphics.rectangle("line", mug.x, self.y - MUG_HEIGHT, MUG_WIDTH, MUG_HEIGHT)
+    end
+
+    for i=1,#self.returning_mugs do
+        local mug = self.returning_mugs[i]
+        love.graphics.rectangle("fill", mug.x, self.y - MUG_HEIGHT, MUG_WIDTH, MUG_HEIGHT)
     end
 end
 
 
 function Lane:updateMugs(dt) 
-    local distance = 100 * dt
+    local distance = 150 * dt
     for k, v in pairs(self.mugs) do
         v.x = v.x - distance
+    end
+
+    distance = 200 * dt
+    local to_remove = {}
+    local falls_off = self.TABLE_END * .99
+    for i = 1,#self.returning_mugs,1 do
+        self.returning_mugs[i].x = self.returning_mugs[i].x + distance
+        if self.returning_mugs[i].x > falls_off then
+            if self.barkeep_here then
+                table.insert(to_remove, i)
+                SCORE = SCORE + 150
+            else
+                LIFE_LOST_ANIMATION = 7
+                LIFE_LOST_REASON = "YOU BROKE A MUG!"
+            end
+        end
+    end
+
+    for i = 1,#to_remove do
+        table.remove(self.returning_mugs, to_remove[i])
     end
 end
 
@@ -227,8 +253,7 @@ end
 
 function Lane:sendMug()
     table.insert(self.mugs, {
-        x = self.TABLE_END - MUG_WIDTH,
-        fill = 100
+        x = self.TABLE_END - MUG_WIDTH
     })
 end
 
@@ -264,7 +289,7 @@ PATRON_SPAWNED_LAST = 1
 PATRON_COUNTER = 0
 
 -- Set LIFE_LOST_ANIMATION > 0 to trigger a life lose
-LIFE_LOST_ANIMATION = 20
+LIFE_LOST_ANIMATION = 0
 LIFE_LOST_REASON = "TEST"
 
 
