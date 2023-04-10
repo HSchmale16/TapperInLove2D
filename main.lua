@@ -45,6 +45,7 @@ function Lane:new (o)
         y = 0,
         barkeep_here = false,
         mugs = {},
+        returning_mugs = {},
         TABLE_END = 900,
         patrons = {},
         leaving_patrons = {}
@@ -139,7 +140,7 @@ end
 
 
 function Lane:updateMugs(dt) 
-    local distance = 40 * dt
+    local distance = 100 * dt
     for k, v in pairs(self.mugs) do
         v.x = v.x - distance
     end
@@ -178,8 +179,8 @@ function Lane:update(dt)
     -- we only have to test the first mug and first patron to see if they have their beer
     -- if they have any beers remaining they get shoved back.
     -- the score also goes up for matching them.
-    -- maybe should update to searching for patrons on a given beer.
-    -- Max number of steps will be 5.
+    -- TODO: maybe should update to searching for patrons on a given beer.
+    -- Max number of steps will probably be 5.
     if #self.patrons > 0 and #self.mugs > 0 then
         local patron = self.patrons[1]
         local beer = self.mugs[1]
@@ -198,20 +199,36 @@ function Lane:update(dt)
                 table.insert(self.leaving_patrons, patron)
             else
                 -- TODO: Cover drinking a beer animation
+                -- The patron is satisified and needs one fewer beer. The mug also returns to the bartender
+                beer.fill = 0
+                table.insert(self.returning_mugs, beer)
             end
         end
     end
 
+    -- here's where we check for game over or life lost scenarios
     if #self.patrons > 0 then
+        local patron = self.patrons[1]
+        if patron.x > self.TABLE_END then 
+            -- trigger game over or life lost
+            LIFE_LOST_ANIMATION = 10
+            LIFE_LOST_REASON = "YOU DIDN'T SERVE FAST ENOUGH"
+        end
     end
 
     if #self.mugs > 0 then 
+        local mug = self.mugs[1]
+        if mug.x < 0 then
+            LIFE_LOST_ANIMATION = 10
+            LIFE_LOST_REASON = "YOU SPILLED THE BEER! OH THE HUMANITY!"
+        end
     end
 end
 
 function Lane:sendMug()
     table.insert(self.mugs, {
-        x = self.TABLE_END - MUG_WIDTH
+        x = self.TABLE_END - MUG_WIDTH,
+        fill = 100
     })
 end
 
@@ -222,7 +239,7 @@ function Lane:spawnPatron()
         y  = love.math.random(0, 4),
         dy = love.math.random(6, 8),
         sprite = 0,
-        beers_required = 1
+        beers_required = love.math.random(1, 3)
     })
 end
 
@@ -246,9 +263,9 @@ PATRON_PATTERN = 1
 PATRON_SPAWNED_LAST = 1
 PATRON_COUNTER = 0
 
--- IS_CUTSCENE
-LIFE_LOST_ANIMATION = 0
-LIFE_LOST_REASON = ""
+-- Set LIFE_LOST_ANIMATION > 0 to trigger a life lose
+LIFE_LOST_ANIMATION = 20
+LIFE_LOST_REASON = "TEST"
 
 
 function love.load() 
@@ -265,19 +282,37 @@ function love.draw()
 
     -- just implement a flashy boy for things a bit too far over.
     if LIFE_LOST_ANIMATION > 0 and LIFE_LOST_ANIMATION % 2 == 0 then
-        love.graphics.rectangle("fill", 0, 0, 1024, 768)
+        love.graphics.setColor({1, 0, 0})
+        love.graphics.rectangle("fill", 290, 190, 444, 388)
+
+        love.graphics.setColor({0, 1, 0})
+        love.graphics.rectangle("fill", 305, 205, 414, 358)
+
+        love.graphics.setColor({0, 0, 1})
+        love.graphics.rectangle("fill", 310, 210, 404, 348)
+
+        love.graphics.setColor({1, 1, 1})
+        love.graphics.print(LIFE_LOST_REASON, 300, 200, 0, 5, 5)
     end
 end
 
 -- random variable to track how long the screen has been blanked for
 LIFE_LOST_DECR_TIMER = 0
+LIFE_LOST_FLASH_INTERVAL = {1, 0.2}
 
 function love.update(dt)
     if LIFE_LOST_ANIMATION > 0 then
         LIFE_LOST_DECR_TIMER = LIFE_LOST_DECR_TIMER + dt
-        if LIFE_LOST_DECR_TIMER > 0.5 then
+        local interval = LIFE_LOST_FLASH_INTERVAL[LIFE_LOST_ANIMATION % 2 + 1]
+        if LIFE_LOST_DECR_TIMER > interval then
+            -- decrement the flash every half second
             LIFE_LOST_ANIMATION = LIFE_LOST_ANIMATION - 1
-            LIFE_LOST_DECR_TIMER = LIFE_LOST_DECR_TIMER - 0.5
+            LIFE_LOST_DECR_TIMER = LIFE_LOST_DECR_TIMER - interval
+            if LIFE_LOST_ANIMATION == 0 then
+                LIVES = LIVES - 1
+                LIFE_LOST_REASON = ""
+                resetLanes()
+            end
         end
         print(LIFE_LOST_DECR_TIMER, LIFE_LOST_ANIMATION)
     else
@@ -364,6 +399,7 @@ end
 
 function resetGame() 
     SCORE = 0
+    LIVES = 3
     resetLanes()
 end
 
